@@ -15,6 +15,7 @@
     "include_nsfw_posts": false,
     "min_comment_length": 32,
     "max_comment_length": 2048,
+    "silent": false,
     "ffmpeg_c:v": "libx264",
     "ffmpeg_c:a": "aac",
     "ffmpeg_pix_fmt": "yuv420p",

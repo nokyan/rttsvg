@@ -55,6 +55,8 @@ All configuration happens in ``config.json``. You can change the following optio
 
 ``max_comment_length``: The maximum amount of characters a comment must have for it to be considered into the video.
 
+``silent``: If true, the script will write nothing into the console but the path of the finished video(s).
+
 ``ffmpeg_c:v``: The argument for the ``c:v`` (video codec) option for ffmpeg. ``libx264`` is widely supported, but is software-based, so it might be a bit slow.
 
 ``ffmpeg_c:a``: The argument for the ``c:a`` (audio codec) option for ffmpeg. Best to leave it at ``aac``.

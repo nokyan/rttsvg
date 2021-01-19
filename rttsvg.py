@@ -45,7 +45,7 @@ with open("config.json") as f:
     AUDIO_SAMPLING_RATE = config["ffmpeg_ar"]
     MIN_COMMENT_LENGTH = config["min_comment_length"]
     MAX_COMMENT_LENGTH = config["max_comment_length"]
-    print(TRANSITION_FILE)
+    SILENT = config["silent"]
 
 
 HEADER_FONT = ImageFont.truetype("font.ttf", 26)
@@ -55,6 +55,11 @@ TEXT_FONT = ImageFont.truetype("font.ttf", 34)
 COMMENT_COUNTER = -1
 LENGTH = 0
 
+
+# Subject to improvement
+def log(msg, bypass_silent: bool):
+    if not SILENT or bypass_silent:
+        print(msg)
 
 def pick_reddit_post():
     global NSFW_FILTER
@@ -75,11 +80,11 @@ def generate_TTS(text):
     filename = os.path.join("tts", "%s.mp3" % str(COMMENT_COUNTER))
     edited_text = text.replace("*", "").replace("_", "")
     if VOICE.lower() == "google":
-        print("Generating TTS (Google)")
+        log("Generating TTS (Google)", False)
         tts = gTTS(text)
         tts.save(filename)
     else:
-        print("Generating TTS (Brian)")
+        log("Generating TTS (Brian)", False)
         tts = requests.get("https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=%s" % text)
         with open(filename, "wb") as f:
             f.write(tts.content)
@@ -116,7 +121,7 @@ def truncate(text):
 
 
 def generate_image(author, points, text, title=False):
-    print("Generating image")
+    log("Generating image", False)
     header = "u/%s | %s points" % (author, str(points))
     if points >= 1000:
         header = "u/%s | %.1fk points" % (author, points/1000)
@@ -156,40 +161,40 @@ def generate_video():
     if TRANSITION_FILE is not None:
         LENGTH += get_length(TRANSITION_FILE)
     reddit_post = pick_reddit_post()
-    print("Picked thread \"%s\"" % reddit_post[0]["data"]["children"][0]["data"]["title"])
+    log("Picked thread \"%s\"" % reddit_post[0]["data"]["children"][0]["data"]["title"], False)
     generate_image(filter(reddit_post[0]["data"]["children"][0]["data"]["author"]), reddit_post[0]["data"]["children"][0]["data"]["ups"], filter(reddit_post[0]["data"]["children"][0]["data"]["title"]))
     generate_TTS(reddit_post[0]["data"]["children"][0]["data"]["title"])
-    print("Length reached: %s seconds" % str(LENGTH))
-    print("Timeout for %s seconds to avoid TTS rate-limiting" % str(TTS_COOLDOWN))
+    log("Length reached: %s seconds" % str(LENGTH), False)
+    log("Timeout for %s seconds to avoid TTS rate-limiting" % str(TTS_COOLDOWN), False)
     time.sleep(TTS_COOLDOWN)
     COMMENT_COUNTER += 1
     while LENGTH < MIN_LENGTH:
         comment = reddit_post[1]["data"]["children"][COMMENT_COUNTER]
         COMMENT_COUNTER += 1
         if COMMENT_COUNTER >= len(reddit_post[1]["data"]["children"]):
-            print("Out of comments!")
+            log("Out of comments!", False)
             break
         try:
             if comment["data"]["author"] == "AutoModerator":
-                print("Discarding AutoModerator's comment")
+                log("Discarding AutoModerator's comment", False)
                 continue
         # if this happens, we reached a weird comment-like thing in the comments marking the end
         except:
-            print("Out of comments!")
+            log("Out of comments!", False)
             break
         if len(comment["data"]["body"]) > MAX_COMMENT_LENGTH:
-            print("Discarding comment #%s because it is too long" % COMMENT_COUNTER)
+            log("Discarding comment #%s because it is too long" % COMMENT_COUNTER, False)
             continue
         if len(comment["data"]["body"]) < MIN_COMMENT_LENGTH:
-            print("Discarding comment #%s because it is too short" % COMMENT_COUNTER)
+            log("Discarding comment #%s because it is too short" % COMMENT_COUNTER, False)
             continue
         comment_text = filter(comment["data"]["body"])
-        print("Picked comment #%s: %s" % (COMMENT_COUNTER, truncate(comment_text)))
+        log("Picked comment #%s: %s" % (COMMENT_COUNTER, truncate(comment_text)), False)
         generate_image(filter(comment["data"]["author"]), comment["data"]["ups"], comment_text)
         generate_TTS(comment_text)
-        print("Length reached: %s seconds" % str(LENGTH))
+        log("Length reached: %s seconds" % str(LENGTH), False)
         used_numbers.append(COMMENT_COUNTER)
-        print("Timeout for %s seconds to avoid TTS rate-limiting" % str(TTS_COOLDOWN))
+        log("Timeout for %s seconds to avoid TTS rate-limiting" % str(TTS_COOLDOWN), False)
         time.sleep(TTS_COOLDOWN)
     # stitch it all together
     # first we want to make clips of every comment, then we stich all those clips together (including intro, outro and transition if applicable)
@@ -197,12 +202,12 @@ def generate_video():
     transition_conv = os.path.join("vid", "transition.flv")
     outro_conv = os.path.join("vid", "outro.flv")
     with open("content_list.txt", "a") as f:
-        print("Creating clips out of the comments")
+        log("Creating clips out of the comments", False)
         if TRANSITION_FILE is not None and not os.path.exists(transition_conv):
             f.write("file '%s'\n" % transition_conv)
         for i in used_numbers:
             if(os.path.exists(os.path.join("tts", "%s.mp3" % str(i)))):
-                print("Building clip #" + str(i))
+                log("Building clip #" + str(i), False)
                 img_path = os.path.join("img", "%s.png" % str(i))
                 tts_path = os.path.join("tts", "%s.mp3" % str(i))
                 vid_path = os.path.join("vid", "%s.flv" % str(i))
@@ -215,27 +220,27 @@ def generate_video():
                 if TRANSITION_FILE is not None and os.path.exists(TRANSITION_FILE):
                     f.write("file '%s'\n" % transition_conv)
     if INTRO_FILE is not None and not os.path.exists(intro_conv):
-        print("Converting intro into the same format")
+        log("Converting intro into the same format", False)
         subprocess.run(["ffmpeg", "-y", "-i", INTRO_FILE, "-vf", "scale=1920:1080", "-aspect", "1920:1080",
                 "-c:v", VIDEO_CODEC, "-s", "1920x1080", "-c:a", AUDIO_CODEC, "-ar", AUDIO_SAMPLING_RATE, "-shortest", "-pix_fmt", PIXEL_FORMAT, "-r", "30",
                 intro_conv],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
     if TRANSITION_FILE is not None and not os.path.exists(transition_conv):
-        print("Converting transition into the same format")
+        log("Converting transition into the same format", False)
         subprocess.run(["ffmpeg", "-y", "-i", TRANSITION_FILE, "-vf", "scale=1920:1080", "-aspect", "1920:1080",
                 "-c:v", VIDEO_CODEC, "-s", "1920x1080", "-c:a", AUDIO_CODEC, "-ar", AUDIO_SAMPLING_RATE, "-shortest", "-pix_fmt", PIXEL_FORMAT, "-r", "30", 
                 transition_conv],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
     if OUTRO_FILE is not None and not os.path.exists(outro_conv):
-        print("Converting outro into the same format")
+        log("Converting outro into the same format", False)
         subprocess.run(["ffmpeg", "-y", "-i", OUTRO_FILE, "-vf", "scale=1920:1080", "-aspect", "1920:1080",
                 "-c:v", VIDEO_CODEC, "-s", "1920x1080", "-c:a", AUDIO_CODEC, "-ar", AUDIO_SAMPLING_RATE, "-shortest", "-pix_fmt", PIXEL_FORMAT, "-r", "30", 
                 outro_conv],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
-    print("Stitching the clips together")
+    log("Stitching the clips together", False)
     subprocess.run(["ffmpeg", "-y", "-safe", "0", "-f", "concat", "-i", "content_list.txt", "-c", "copy", os.path.join("vid", "content.flv")],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
@@ -246,9 +251,9 @@ def generate_video():
         elif os.path.isdir(MUSIC_FOLDER):
             music_file = os.path.join(MUSIC_FOLDER, random.choice(os.listdir(MUSIC_FOLDER)))
         else:
-            print("Unable to locate music, skipping adding the music.")
+            log("Unable to locate music, skipping adding the music.", False)
     if music_file != None:
-        print("Looping the music (unelegantly, sorry :/)")
+        log("Looping the music (unelegantly, sorry :/)", False)
         vid_length = get_length(os.path.join("vid", "content.flv"))
         loops = math.ceil(vid_length / get_length(music_file))
         with open("music_loop.txt", "a") as f:
@@ -257,7 +262,7 @@ def generate_video():
         subprocess.run(["ffmpeg", "-y", "-t", str(vid_length), "-f", "concat", "-safe", "0", "-i", "music_loop.txt", "-t", str(vid_length), "-filter:a", "volume=%s" % str(MUSIC_VOLUME), "-c:a", "aac", os.path.join("vid", "looped.m4a")],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
-        print("Putting the music into the video")
+        log("Putting the music into the video", False)
         subprocess.run(["ffmpeg", "-y", "-i", os.path.join("vid", "content.flv"), "-i", os.path.join("vid", "looped.m4a"),
                 "-filter_complex", "[1:0]volume=1[a1];[0:a][a1]amix=inputs=2:duration=first", "-map", "0:v:0", "-c:v", "copy", "-c:a", "aac", os.path.join("vid", "content_music.flv")],
                 stdout=subprocess.PIPE,
@@ -268,17 +273,18 @@ def generate_video():
     subprocess.run(["ffmpeg", "-i", os.path.join("vid", "content.flv"), "-c", "copy", os.path.join("vid", "content_fixed.flv")],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
-    print("Finishing the video")
+    log("Finishing the video", False)
     with open("list.txt", "a") as f:
         if INTRO_FILE is not None:
             f.write("file '%s'\n" % intro_conv)
         f.write("file '%s'\n" % os.path.join("vid", "content_fixed.flv"))
         if OUTRO_FILE is not None:
             f.write("file '%s'\n" % outro_conv)
-    subprocess.run(["ffmpeg", "-y", "-safe", "0", "-f", "concat", "-i", "list.txt", "-c", "copy", reddit_post[0]["data"]["children"][0]["data"]["title"] + ".flv"],
+    video_name = reddit_post[0]["data"]["children"][0]["data"]["title"] + ".flv"
+    subprocess.run(["ffmpeg", "-y", "-safe", "0", "-f", "concat", "-i", "list.txt", "-c", "copy", video_name],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
-    print("Deleting temporary folders and files")
+    log("Deleting temporary folders and files", False)
     shutil.rmtree("tts")
     shutil.rmtree("img")
     shutil.rmtree("vid")
@@ -286,23 +292,24 @@ def generate_video():
     os.remove("content_list.txt")
     if os.path.exists("music_loop.txt"):
         os.remove("music_loop.txt")
-    print("Done, and it only took %s! Have fun with your new video! :)" % str(datetime.now() - start_time))
+    log("Done, and it only took %s! Have fun with your new video! :)" % str(datetime.now() - start_time), False)
+    log(os.path.abspath(video_name), True)
     COMMENT_COUNTER = -1
     LENGTH = 0
 
 
 if __name__ == "__main__":
     video_counter = 0
-    print("Starting...")
+    log("Starting...", False)
     if ENDLESS:
-        print("Warning! Endless mode activated!")
+        log("Warning! Endless mode activated!", False)
         while True:
-            print("Starting video #%s" % str(video_counter + 1))
+            log("Starting video #%s" % str(video_counter + 1), False)
             generate_video()
             video_counter += 1
     else:
         while video_counter < COUNT:
-            print("Starting video #%s" % str(video_counter + 1))
+            log("Starting video #%s" % str(video_counter + 1), False)
             generate_video()
             video_counter += 1
 

@@ -43,7 +43,7 @@ All configuration happens in ``config.json``. You can change the following optio
 
 ``upvote_threshold``: The minimum amounts of upvote a **post** (not a comment) has to have for it to be considered.
 
-``voice``: TTS Voice to be used. ``google`` has a lower recommended cooldown and is more reliable, ``brian`` is useful for the authentic generic AskReddit video experience™.
+``voice``: TTS Voice to be used. ``google`` has a lower recommended cooldown and is more reliable, ``brian`` is pretty unreliable concerning rate-limiting (or not being blocked right off the bat) but useful for the authentic generic AskReddit video experience™.
 
 ``tts_cooldown``: Cooldown in seconds between TTS requests. Recommended values are 6 for ``google``, atleast 10 for ``brian``.
 
@@ -63,12 +63,16 @@ All configuration happens in ``config.json``. You can change the following optio
 
 ``ffmpeg_ar``: The argument for the ``ar`` (audio sampling rate) option for ffmpeg. Best to leave it at ``22050``, since the TTS MP3s also have that sampling rate.
 
-## Todo
+## Todo (not in a particular order)
 
 - Code cleanup (lol)
+- Make the include_nsfw_posts option actually work
+- Ability to get more reddit posts and comments to avoid running out of them
+- Automatic video title generation
 - Automatic thumbnail generation
 - Automatic (scheduled?) upload to YouTube
 - More TTS voices (and/or making Brian more reliable)
+- ~~Generate AskReddit posts using AI~~
 
 ## Credits
 

@@ -159,10 +159,10 @@ def generate_video():
     print("Picked thread \"%s\"" % reddit_post[0]["data"]["children"][0]["data"]["title"])
     generate_image(filter(reddit_post[0]["data"]["children"][0]["data"]["author"]), reddit_post[0]["data"]["children"][0]["data"]["ups"], filter(reddit_post[0]["data"]["children"][0]["data"]["title"]))
     generate_TTS(reddit_post[0]["data"]["children"][0]["data"]["title"])
-    print("Waiting %s seconds for TTS" % str(TTS_COOLDOWN))
+    print("Length reached: %s seconds" % str(LENGTH))
+    print("Timeout for %s seconds to avoid TTS rate-limiting" % str(TTS_COOLDOWN))
     time.sleep(TTS_COOLDOWN)
     COMMENT_COUNTER += 1
-    print("Reached length: %s" % str(LENGTH))
     while LENGTH < MIN_LENGTH:
         comment = reddit_post[1]["data"]["children"][COMMENT_COUNTER]
         COMMENT_COUNTER += 1
@@ -187,10 +187,10 @@ def generate_video():
         print("Picked comment #%s: %s" % (COMMENT_COUNTER, truncate(comment_text)))
         generate_image(filter(comment["data"]["author"]), comment["data"]["ups"], comment_text)
         generate_TTS(comment_text)
+        print("Length reached: %s seconds" % str(LENGTH))
+        used_numbers.append(COMMENT_COUNTER)
         print("Timeout for %s seconds to avoid TTS rate-limiting" % str(TTS_COOLDOWN))
         time.sleep(TTS_COOLDOWN)
-        used_numbers.append(COMMENT_COUNTER)
-        print("Length reached: %s seconds" % str(LENGTH))
     # stitch it all together
     # first we want to make clips of every comment, then we stich all those clips together (including intro, outro and transition if applicable)
     intro_conv = os.path.join("vid", "intro.flv")
